@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ขนมปังว้าวว้าว | ระบบสต๊อก</title>
+<style>
+:root{--bg:#fff8f0;--card:#fff;--ink:#39251c;--muted:#876b5b;--brand:#d97736;--brand2:#a94f20;--line:#f0dfd2;--green:#25845a;--red:#c33b3b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,"Noto Sans Thai",sans-serif}
+header{background:linear-gradient(120deg,#b95725,#e99b55);color:#fff;padding:22px 5%;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:clamp(22px,4vw,32px)}header p{margin:5px 0 0;opacity:.9}
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px 5%;background:#fff;border-bottom:1px solid var(--line)}
+nav button,.btn{border:0;border-radius:10px;padding:10px 14px;background:#f8e8dc;color:var(--brand2);font-weight:bold;cursor:pointer}
+nav button.active,.btn.primary{background:var(--brand);color:white}
+.btn.danger{background:#fde8e8;color:var(--red)}
+main{max-width:1200px;margin:22px auto;padding:0 16px}.page{display:none}.page.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:18px}
+.card,.panel{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:0 3px 12px #6e3a1010}
+.metric{font-size:25px;font-weight:bold;margin-top:8px}.muted{color:var(--muted);font-size:13px}
+h2{margin:8px 0 16px}h3{margin:0 0 12px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:5px}
+input,select,textarea{padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit;width:100%;background:#fff}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+table{width:100%;border-collapse:collapse;min-width:700px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{background:#fff2e8;color:var(--brand2)}
+.tablewrap{overflow:auto;margin-top:12px}.notice{background:#fff3cd;padding:12px;border-radius:10px;margin-bottom:14px;font-size:14px}
+.good{color:var(--green)}.bad{color:var(--red)}.tag{background:#fff0e4;color:var(--brand2);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:bold;cursor:pointer}
+footer{text-align:center;color:var(--muted);padding:24px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🍞 ขนมปังว้าวว้าว</h1><p>ระบบจัดการสต๊อก · ต้นทุน · ยอดขาย</p></div>
+  <span class="tag" id="syncStatus" onclick="openPage('backup')" title="คลิกเพื่อตั้งค่า Google Sheet">ข้อมูลเก็บในเบราว์เซอร์นี้</span>
+</header>
+<nav>
+<button class="active" data-page="dashboard">Dashboard</button><button data-page="stock">สต๊อกสินค้า</button><button data-page="sale">บันทึกยอดขาย</button><button data-page="expense">ค่าใช้จ่าย</button><button data-page="history">ประวัติ</button><button data-page="backup">สำรองข้อมูล / Google Sheet</button>
+</nav>
+<main>
+<section id="dashboard" class="page active">
+<h2>Dashboard ร้าน</h2><div class="cards" id="metrics"></div>
+<div class="grid2"><div class="panel"><h3>สินค้าใกล้หมด (≤ 5 ชิ้น)</h3><div id="lowstock"></div></div><div class="panel"><h3>สินค้าขายดี</h3><div id="bestseller"></div></div></div>
+</section>
+<section id="stock" class="page">
+<h2>สต๊อกสินค้า</h2><div class="notice">สินค้าเริ่มต้น 10 รายการ ราคาต้นทุนตั้งต้นชิ้นละ ฿15.50 สามารถแก้ต้นทุนและยอดคงเหลือได้ตามจริง</div>
+<div class="panel"><h3>รับเข้า / ปรับสต๊อก</h3><form id="stockForm">
+<label>สินค้า<select id="stockProduct"></select></label><label>ประเภท<select id="stockType"><option value="รับเข้า">รับเข้า</option><option value="เบิกออก">เบิกออก</option><option value="ปรับสต๊อก">ปรับสต๊อก (ยอดใหม่)</option></select></label>
+<label>จำนวน<input id="stockQty" type="number" min="0.001" step="0.001" required></label><label>หน่วยที่กรอก<select id="stockUnit"><option value="ชิ้น">ชิ้น</option><option value="กล่อง">กล่อง</option><option value="โหล">โหล</option></select></label>
+<label>ชิ้นต่อหน่วย (กรณีไม่ใช่ชิ้น)<input id="unitFactor" type="number" min="0.001" step="0.001" value="1"></label><label>ต้นทุนต่อชิ้น (฿)<input id="unitCost" type="number" min="0" step="0.01" value="15.5"></label><label>พนักงาน<input id="stockStaff" placeholder="ชื่อพนักงาน"></label><label>หมายเหตุ<input id="stockNote"></label>
+</form><div class="actions"><button class="btn primary" onclick="saveStock()">บันทึกรายการ</button></div></div>
+<div class="panel" style="margin-top:16px"><h3>รายการสินค้า</h3><div class="tablewrap"><table><thead><tr><th>สินค้า</th><th>หมวด</th><th>หน่วย</th><th>ต้นทุน/ชิ้น</th><th>คงเหลือ</th><th>มูลค่าสต๊อก</th></tr></thead><tbody id="stockTable"></tbody></table></div></div>
+</section>
+<section id="sale" class="page"><h2>บันทึกยอดขาย</h2><div class="panel"><form id="saleForm"><label>สินค้า<select id="saleProduct"></select></label><label>จำนวนขาย (ชิ้น)<input id="saleQty" type="number" min="0.001" step="0.001" required></label><label>ราคาขาย/ชิ้น (฿)<input id="salePrice" type="number" min="0" step="0.01" required></label><label>พนักงาน<input id="saleStaff" placeholder="ชื่อพนักงาน"></label><label>หมายเหตุ<input id="saleNote"></label></form><div class="actions"><button class="btn primary" onclick="saveSale()">บันทึกยอดขาย</button></div><p class="muted">ระบบจะตัดสต๊อกและคำนวณกำไรขั้นต้นจากต้นทุนต่อชิ้นปัจจุบัน</p></div></section>
+<section id="expense" class="page"><h2>ค่าใช้จ่ายอื่น ๆ</h2><div class="panel"><form><label>รายการ<input id="expName" placeholder="เช่น ค่าแก๊ส"></label><label>จำนวนเงิน (฿)<input id="expAmount" type="number" min="0" step="0.01"></label><label>พนักงาน<input id="expStaff"></label><label>หมายเหตุ<input id="expNote"></label></form><div class="actions"><button class="btn primary" onclick="saveExpense()">บันทึกค่าใช้จ่าย</button></div></div></section>
+<section id="history" class="page"><h2>ประวัติย้อนหลัง</h2><div class="panel"><form><label>ตั้งแต่วันที่<input id="filterFrom" type="date"></label><label>ถึงวันที่<input id="filterTo" type="date"></label><label>พนักงาน<input id="filterStaff" placeholder="ค้นหาชื่อ"></label><label>สินค้า<input id="filterProduct" placeholder="ค้นหาสินค้า"></label><label>หมวดหมู่<select id="filterCat"><option value="">ทั้งหมด</option><option>ขนมปัง</option></select></label></form><div class="actions"><button class="btn primary" onclick="renderHistory()">ค้นหา</button><button class="btn" onclick="clearFilters()">ล้างตัวกรอง</button></div><div class="tablewrap"><table><thead><tr><th>วันเวลา</th><th>พนักงาน</th><th>สินค้า</th><th>หมวด</th><th>รายการ</th><th>จำนวนกรอก</th><th>หน่วย</th><th>จำนวนมาตรฐาน</th><th>ราคา/หน่วย</th><th>ต้นทุน</th><th>รายได้</th><th>กำไร</th><th>หมายเหตุ</th></tr></thead><tbody id="historyTable"></tbody></table></div></div></section>
+<section id="backup" class="page">
+  <h2>เชื่อมต่อ Google Sheet & สำรองข้อมูล</h2>
+  
+  <div class="panel" style="margin-bottom:16px">
+    <h3>📊 เชื่อมต่อ Google Sheet (Apps Script)</h3>
+    <p class="muted">วางลิงก์ Web App URL ที่ได้จากการ Deploy Google Apps Script เพื่อส่งข้อมูลสต๊อก ยอดขาย และค่าใช้จ่ายไปยัง Google Sheet อัตโนมัติ</p>
+    <label>ลิงก์ Google Apps Script (Web App URL)
+      <input id="gasUrl" type="url" placeholder="https://script.google.com/macros/s/xxxxxxxxxxxxxxxxx/exec">
+    </label>
+    <div class="actions">
+      <button class="btn primary" onclick="saveGasUrl()">บันทึกการเชื่อมต่อ</button>
+      <button class="btn" onclick="syncAllNow()">ซิงค์ข้อมูลทั้งหมดไป Google Sheet</button>
+      <button class="btn danger" onclick="clearGasUrl()">ยกเลิกการเชื่อมต่อ</button>
+    </div>
+    <p class="muted" id="gasInfo" style="margin-top:10px"></p>
+  </div>
+
+  <div class="panel">
+    <h3>💾 สำรองและกู้คืนข้อมูล (ไฟล์ในเครื่อง)</h3>
+    <p>สำรองสินค้าและประวัติทั้งหมดเป็นไฟล์ JSON เก็บไว้ในเครื่อง และนำไฟล์กลับมากู้คืนได้</p>
+    <div class="actions">
+      <button class="btn primary" onclick="backup()">ดาวน์โหลดไฟล์สำรอง</button>
+      <label style="max-width:350px">นำเข้าไฟล์สำรอง<input type="file" id="restoreFile" accept=".json,application/json" onchange="restore(event)"></label>
+    </div>
+    <p class="muted">แนะนำให้สำรองข้อมูลเป็นประจำ ข้อมูลในเว็บนี้อยู่ในเบราว์เซอร์และอุปกรณ์ที่ใช้งานเท่านั้น</p>
+  </div>
+</section>
+</main><footer>ขนมปังว้าวว้าว · ระบบสต๊อกอย่างง่าย</footer>
+<script>
+// =========================================================================
+// วางลิงก์ Google Apps Script (Web App URL) ของคุณในเครื่องหมายคำพูดด้านล่างนี้
+const DEFAULT_GAS_URL = "";
+// =========================================================================
+
+const initialProducts=["ฝอยทอง","ฝอยทองลูกเกด","ลูกเกด","มะพร้าว","มะพร้าวสังขยาใบเตย","เนยสด","สังขยาใบเตย","ช็อกโกแลต","หมูหยอง","หมูหยองพริกเผา"];
+const KEY="wowwow_bakery_v1";
+const GAS_KEY="wowwow_gas_url_v1";
+let db=JSON.parse(localStorage.getItem(KEY)||"null");
+if(!db){db={products:initialProducts.map((name,i)=>({id:i+1,name,category:"ขนมปัง",unit:"ชิ้น",cost:15.5,stock:0})),history:[],expenses:[]};persist();}
+function persist(){localStorage.setItem(KEY,JSON.stringify(db));}
+function money(n){return "฿"+Number(n||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function product(id){return db.products.find(p=>p.id===Number(id));}
+function options(){return db.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");}
+function refresh(){["stockProduct","saleProduct"].forEach(id=>document.getElementById(id).innerHTML=options());renderStock();renderHistory();dashboard();updateGasUI();}
+
+function openPage(pageId){
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x.dataset.page===pageId));
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+  document.getElementById(pageId).classList.add("active");
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>openPage(b.dataset.page));
+
+// --- Google Apps Script Sync ---
+function updateGasUI(){
+  const url=localStorage.getItem(GAS_KEY)||DEFAULT_GAS_URL;
+  document.getElementById("gasUrl").value=url;
+  const badge=document.getElementById("syncStatus");
+  const info=document.getElementById("gasInfo");
+  if(url){
+    badge.textContent="🟢 เชื่อมต่อ Google Sheet แล้ว";
+    info.innerHTML=`สถานะ: <b class="good">เชื่อมต่อแล้ว</b> (ระบบจะส่งข้อมูลอัตโนมัติทุกครั้งที่บันทึกรายการ)`;
+  }else{
+    badge.textContent="⚪ ยังไม่เชื่อม Google Sheet";
+    info.textContent="สถานะ: ยังไม่ได้ตั้งค่าลิงก์ (ข้อมูลจะถูกเก็บไว้ในเบราว์เซอร์นี้เท่านั้น)";
+  }
+}
+function saveGasUrl(){
+  const url=document.getElementById("gasUrl").value.trim();
+  if(!url||!url.startsWith("http"))return alert("กรุณากรอกลิงก์ Web App URL ให้ถูกต้อง (ขึ้นต้นด้วย https://)");
+  localStorage.setItem(GAS_KEY,url);
+  updateGasUI();
+  alert("บันทึกการเชื่อมต่อ Google Sheet เรียบร้อยแล้ว");
+}
+function clearGasUrl(){
+  if(!localStorage.getItem(GAS_KEY)&&!DEFAULT_GAS_URL)return;
+  if(confirm("ต้องการยกเลิกการเชื่อมต่อ Google Sheet หรือไม่?")){
+    localStorage.removeItem(GAS_KEY);
+    updateGasUI();
+  }
+}
+async function syncToSheet(payload,isManual=false){
+  const url=localStorage.getItem(GAS_KEY)||DEFAULT_GAS_URL;
+  if(!url){
+    if(isManual)alert("กรุณาวางลิงก์ Google Apps Script และกดบันทึกก่อน");
+    return;
+  }
+  const badge=document.getElementById("syncStatus");
+  badge.textContent="⏳ กำลังซิงค์ Google Sheet...";
+  try{
+    await fetch(url,{
+      method:"POST",
+      mode:"no-cors",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({timestamp:new Date().toISOString(),shop:"ขนมปังว้าวว้าว",...payload})
+    });
+    const time=new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"});
+    badge.textContent=`🟢 ซิงค์ Google Sheet แล้ว (${time})`;
+    if(isManual)alert("ส่งข้อมูลไปยัง Google Sheet เรียบร้อยแล้ว");
+  }catch(err){
+    badge.textContent="🔴 ซิงค์ไม่สำเร็จ";
+    if(isManual)alert("เกิดข้อผิดพลาดในการเชื่อมต่อ: "+err.message);
+  }
+}
+function syncAllNow(){
+  syncToSheet({action:"sync_all",products:db.products,history:db.history,expenses:db.expenses},true);
+}
+// -------------------------------
+
+function addHistory(x){const entry={id:Date.now()+Math.random(),date:new Date().toISOString(),...x};db.history.unshift(entry);persist();return entry;}
+function saveStock(){
+ const p=product(document.getElementById("stockProduct").value),type=document.getElementById("stockType").value,q=+document.getElementById("stockQty").value,f=+document.getElementById("unitFactor").value||1,c=+document.getElementById("unitCost").value,staff=document.getElementById("stockStaff").value,note=document.getElementById("stockNote").value;
+ if(!p||!q||q<=0||f<=0||c<0)return alert("กรุณากรอกจำนวน หน่วยแปลง และต้นทุนให้ถูกต้อง");
+ const standard=q*f,old=p.stock;
+ if(type==="รับเข้า"){p.stock+=standard;p.cost=c;}else if(type==="เบิกออก"){if(p.stock<standard)return alert("สต๊อกไม่เพียงพอ");p.stock-=standard;}else{if(standard<0)return;p.stock=standard;}
+ const entry=addHistory({staff,product:p.name,category:p.category,type,enteredQty:q,enteredUnit:document.getElementById("stockUnit").value,factor:f,standardQty:type==="ปรับสต๊อก"?p.stock-old:standard,unitPrice:c,costTotal:type==="รับเข้า"?standard*c:0,revenue:0,profit:0,note});
+ syncToSheet({action:"stock",record:entry,currentStock:p.stock,product:p.name,type,qty:entry.standardQty,unitCost:c,staff,note});
+ document.getElementById("stockForm").reset();document.getElementById("unitFactor").value=1;document.getElementById("unitCost").value=15.5;refresh();
+}
+function saveSale(){
+ const p=product(document.getElementById("saleProduct").value),q=+document.getElementById("saleQty").value,price=+document.getElementById("salePrice").value,staff=document.getElementById("saleStaff").value,note=document.getElementById("saleNote").value;
+ if(!p||q<=0||price<0)return alert("กรอกข้อมูลยอดขายให้ถูกต้อง");if(p.stock<q)return alert("สต๊อกไม่เพียงพอ ไม่สามารถขายติดลบได้");
+ const cost=q*p.cost,rev=q*price;p.stock-=q;
+ const entry=addHistory({staff,product:p.name,category:p.category,type:"ขาย",enteredQty:q,enteredUnit:"ชิ้น",factor:1,standardQty:q,unitPrice:p.cost,costTotal:cost,revenue:rev,profit:rev-cost,note});
+ syncToSheet({action:"sale",record:entry,currentStock:p.stock,product:p.name,type:"ขาย",qty:q,price,cost,revenue:rev,profit:rev-cost,staff,note});
+ document.getElementById("saleForm").reset();refresh();
+}
+function saveExpense(){
+ const name=document.getElementById("expName").value,amount=+document.getElementById("expAmount").value,staff=document.getElementById("expStaff").value,note=document.getElementById("expNote").value;
+ if(!name||amount<0)return alert("กรอกชื่อรายการและจำนวนเงิน");
+ const exp={date:new Date().toISOString(),name,amount,staff,note};
+ db.expenses.push(exp);persist();
+ syncToSheet({action:"expense",record:exp,type:"ค่าใช้จ่าย",name,amount,staff,note});
+ alert("บันทึกค่าใช้จ่ายแล้ว");document.querySelector("#expense form").reset();dashboard();
+}
+function renderStock(){document.getElementById("stockTable").innerHTML=db.products.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.category}</td><td>${p.unit}</td><td>${money(p.cost)}</td><td>${p.stock.toLocaleString("th-TH")}</td><td>${money(p.stock*p.cost)}</td></tr>`).join("");}
+function renderHistory(){
+ const from=document.getElementById("filterFrom").value,to=document.getElementById("filterTo").value,staff=document.getElementById("filterStaff").value.toLowerCase(),prod=document.getElementById("filterProduct").value.toLowerCase(),cat=document.getElementById("filterCat").value;
+ let rows=db.history.filter(h=>(!from||h.date.slice(0,10)>=from)&&(!to||h.date.slice(0,10)<=to)&&(!staff||(h.staff||"").toLowerCase().includes(staff))&&(!prod||h.product.toLowerCase().includes(prod))&&(!cat||h.category===cat));
+ document.getElementById("historyTable").innerHTML=rows.map(h=>`<tr><td>${new Date(h.date).toLocaleString("th-TH")}</td><td>${esc(h.staff||"-")}</td><td>${esc(h.product||h.expenseName||"-")}</td><td>${esc(h.category||"-")}</td><td>${h.type}</td><td>${h.enteredQty??"-"}</td><td>${h.enteredUnit||"-"}</td><td>${h.standardQty??"-"} ${h.product?"ชิ้น":""}</td><td>${money(h.unitPrice)}</td><td>${money(h.costTotal)}</td><td>${money(h.revenue)}</td><td class="${h.profit>=0?'good':'bad'}">${money(h.profit)}</td><td>${esc(h.note||"-")}</td></tr>`).join("");
+}
+function clearFilters(){["filterFrom","filterTo","filterStaff","filterProduct","filterCat"].forEach(id=>document.getElementById(id).value="");renderHistory();}
+function dashboard(){
+ const now=new Date(),today=now.toLocaleDateString("en-CA"),month=today.slice(0,7),sales=db.history.filter(h=>h.type==="ขาย"),todaySales=sales.filter(h=>h.date.slice(0,10)===today),monthSales=sales.filter(h=>h.date.slice(0,7)===month),expensesToday=db.expenses.filter(e=>e.date.slice(0,10)===today).reduce((s,e)=>s+e.amount,0),expensesMonth=db.expenses.filter(e=>e.date.slice(0,7)===month).reduce((s,e)=>s+e.amount,0),stockValue=db.products.reduce((s,p)=>s+p.stock*p.cost,0),revenueToday=todaySales.reduce((s,h)=>s+h.revenue,0),profitToday=todaySales.reduce((s,h)=>s+h.profit,0)-expensesToday,profitMonth=monthSales.reduce((s,h)=>s+h.profit,0)-expensesMonth;
+ const vals=[["สต๊อกคงเหลือ",db.products.reduce((s,p)=>s+p.stock,0)+" ชิ้น"],["มูลค่าสต๊อก",money(stockValue)],["ยอดขายวันนี้",money(revenueToday)],["ยอดขายเดือนนี้",money(monthSales.reduce((s,h)=>s+h.revenue,0))],["ต้นทุนขายวันนี้",money(todaySales.reduce((s,h)=>s+h.costTotal,0))],["กำไรวันนี้ (หลังค่าใช้จ่าย)",money(profitToday)],["กำไรเดือนนี้ (หลังค่าใช้จ่าย)",money(profitMonth)]];
+ document.getElementById("metrics").innerHTML=vals.map(v=>`<div class="card"><div class="muted">${v[0]}</div><div class="metric">${v[1]}</div></div>`).join("");
+ document.getElementById("lowstock").innerHTML=db.products.filter(p=>p.stock<=5).map(p=>`${esc(p.name)} <b class="bad">${p.stock} ชิ้น</b>`).join("<br>")||"ไม่มี";
+ let rank={};sales.forEach(h=>rank[h.product]=(rank[h.product]||0)+h.standardQty);document.getElementById("bestseller").innerHTML=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>`${esc(x[0])} <b>${x[1]} ชิ้น</b>`).join("<br>")||"ยังไม่มีข้อมูล";
+}
+function backup(){const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="wowwow_backup_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(a.href);}
+function restore(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!x.products||!x.history)throw Error();if(confirm("นำเข้าข้อมูลจะเขียนทับข้อมูลปัจจุบัน ต้องการดำเนินการหรือไม่?")){db=x;persist();refresh();alert("กู้คืนข้อมูลสำเร็จ");}}catch(err){alert("ไฟล์ไม่ถูกต้อง");}};r.readAsText(file);}
+refresh();
+</script></body></html>
